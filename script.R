@@ -7,24 +7,26 @@ library(plyr)
 library(tidyr)
 library(lubridate)
 library(ggplot2)
+library(GGally)
 
+# Set the directory
 setwd("C:/Users/Ester/Documents/curso metano")
-#Output for one herd
+# Read the sniffer output
 bd=read.table("output_methane.txt",sep=",",header=T) #500 rows & 20 cols
 bd_id=unique(bd[,1]) #63 individuals
 summary(bd)
-#Add from test day records
+# Read test day file
 test=read.table("control.csv",sep=";",header=T)#107 rows & 21 cols
 test_id=unique(test[,1])#64 #july and sept
 #obtain date from test day records
 test$test_date1=dmy(test$test_date)
 
-#obtain kgm of protein and fat
+# Obtain kgm of protein and fat 
 
 test$kgmfat=test$fat*test$milk/100                  
 test$kgmprotein=test$protein*test$milk/100 
 ##########################################################################
-########Join both tables by ID and closest date
+Join both tables by ID and closest date
 #obtain date from output
 bd<-tidyr::separate(data = bd, col ="date",into =  c("day", "month","date","time","z","year"), sep = " ", extra = "merge")
 bd$sniffer_date=paste(bd$date, bd$month, bd$year, sep = "/")
@@ -52,48 +54,47 @@ table(bd_full$dif_days)
 
 ##########################################################################
 #CALVING AND MILKING
-#days in milking
+# Days in milking
 bd_full=tidyr::separate(data=bd_full,col ="calving_date", into=c('calving_date', 'calving_time'),sep=' ')
 bd_full$calving_date1=dmy(bd_full$calving_date)
 bd_full$daysinmilking=bd_full$sniffer_date1-bd_full$calving_date1
 bd_full$daysinmilking=gsub("[a-z]","",bd_full$daysinmilking)#retain only numbers
 bd_full$daysinmilking=as.numeric(bd_full$daysinmilking)
-#check difference of days
+# Check difference of days
 table(bd_full$daysinmilking)
-#Choose The threshold the difference of days
+# Choose The threshold the difference of days
 bd_full1=bd_full %>% filter(daysinmilking <= 365)#336
-#Obtain week of lactation 
+# Obtain week of lactation 
 bd_full1$week_lactation=floor(bd_full1$daysinmilking / 7)
-#codify days in milking as levels 
+# Codify days in milking as levels 
 bd_full1<-mutate(bd_full1,state_lactation=case_when(
   daysinmilking < 91 ~ "1",
   daysinmilking > 90 & daysinmilking < 151 ~ "2",
   daysinmilking >150 ~ "3"))
 table(bd_full1$state_lactation)
 
-#codify number of calvings 
+# Codify number of calvings 
 hist(bd_full1$numpar)
 table(bd_full1$numpar)
-#If there is data of more than 3 calvings
+# If there is data of more than 3 calving
 bd_full1<-mutate(bd_full1,num_calving=case_when(
   numpar <= 1 ~ "1",
   numpar > 1 & numpar < 3  ~ "2",
   numpar > 2 ~ "3"))
 table(bd_full1$num_calving)
 ##########################################################################
-#obtain ratio of mean CH4 and mean CO2
+# Obtain ratio of mean CH4 and mean CO2
 bd_full1$ratioCH4CO2=bd_full1$meanCH4/bd_full1$meanCO2
 mean(bd_full1$ratioCH4CO2)
-#Obtain grams per day 
-#Madsen equation
+# Obtain grams per day 
+# Madsen equation
 bd_full1$ECM=bd_full1$milk*(0.25+0.122*bd_full1$fat+0.077*bd_full1$protein)
 bd_full1$days_inpregnancy=0
 bd_full1$gd_madsen<-(0.714*bd_full1$ratioCH4CO2)*180*24*0.001*(5.6*bd_full1$weight**0.75+22*bd_full1$ECM+
                                                                  1.6*0.00001*bd_full1$days_inpregnancy**3)
 mean(bd_full1$gd_madsen,na.rm=T)
-
-
-#tier 2 equation
+  
+# Tier 2 equation
 Cf<-0.386*1.2 #coefficient for feeding situation, lactating
 Ca<-0 #Coefficient for activity
 Cp<-0.10 #coefficient for pregnancy
@@ -109,17 +110,17 @@ bd_full1$CH4_tier2<-GE*0.065/55.65
 
 mean(bd_full1$CH4_tier2,na.rm=T)
 ##########################################################################
-#Distribution of data
+# Distribution of data
 summary(bd_full1)
-#Plot variables
+# Plot the phenotypes distribution
 
-#By trait
+# By trait
 ggplot(bd_full1, aes(x = meanCH4)) +
   geom_histogram( fill = "skyblue", color = "black") +
   theme_minimal() +
   labs(title = "distribution of phenotypes", x = "meanCH4(ppm)", y = "Frequency")
 
-#All traits 
+# All traits 
 names(bd_full1)
 df_plot <- bd_full1 %>%
   pivot_longer(cols = c(9:23,49,52,53), names_to = "Variable", values_to = "Valor")
@@ -131,7 +132,7 @@ ggplot(df_plot, aes(x = Valor)) +
   labs(title = "distribution of phenotypes", x = "value", y = "Frequency")
 
 ##########################################################################
-#Outlier detection
+# Outlier detection
 ggplot(df_plot, aes(x = Valor)) +
   geom_boxplot(fill = "skyblue", color = "black", outlier.color = "red", outlier.shape = 16) +
   facet_wrap(~ Variable, scales = "free")+
@@ -139,21 +140,21 @@ ggplot(df_plot, aes(x = Valor)) +
   labs(title = "Box and whisker plot", x = "Variable", y = "Values")
 
 ##########################################################################
-#Pattern by hour
+Pattern by hour
+# Plot the distribution by hour 
 bd_full1$hour=substr(bd_full1$time, 1, 2) #susbtract the hour to plot
 bd_full1$hour=as.numeric(bd_full1$hour)
 table(bd_full1$hour)
 
-#by individual
+# By individual
 animal_9765=subset(bd_full1,bd_full1$cow=="9765")
-ggplot(data=animal_9765, aes(x= hour, y=meanCH4)) +
+ggplot(data=animal_9765, aes(x= hour, y=gd_madsen)) +
   geom_line()+geom_point()+
   geom_smooth(method = "loess",  span = 0.2,se=TRUE)+
   facet_wrap(facets = vars(date))+
   ggtitle("9765")
 
-bd=subset(bd_full1,bd_full1$cow!="5425")
-
+  # All individuals
 ggplot(data=bd, aes(x= hour, y=gd_madsen)) +
   # geom_point() +  # Puntos individuales
   geom_line()+    #línea de tendencia
@@ -164,7 +165,7 @@ ggplot(data=bd, aes(x= hour, y=gd_madsen)) +
 
 ###############################################################
 #DATA FILTERING
-#Threshold by CO2 concentration
+# Threshold by CO2 concentration
 bd_full2 <- bd_full1 %>%
   dplyr::mutate(across(c(meanCH4, meanCH4_5s,meanCO2,meanRatioCH4_CO2,AUC_CH4,AUC_Ratio,
                          Sum_of_PeaksCH4,Sum_of_PeaksCH4_5s,Sum_of_PeaksCO2,Sum_of_PeaksRatio,
@@ -174,18 +175,9 @@ bd_full2 <- bd_full1 %>%
 #View(bd_full1)
 colSums(is.na(bd_full1))
 colSums(is.na(bd_full2))
-#plot the distribution again, but without technical errors corrected with  [CO2]
-names(bd_full2)
-df_plot1 <- bd_full2 %>%
-  pivot_longer(cols = c(9:23,47,49,50), names_to = "Variable", values_to = "Valor")
 
-ggplot(df_plot1, aes(x = Valor)) +
-  geom_histogram( fill = "skyblue", color = "black") +
-  facet_wrap(~ Variable, scales = "free") +
-  theme_minimal() +
-  labs(title = "distribution of phenotypes", x = "value", y = "Frequency")
 
-#make correction by SD
+# Make correction by SD
 # Function for correction of data ±3 SD
 function_outliers <- function(x) {
   mean_x <- mean(x, na.rm = TRUE)
