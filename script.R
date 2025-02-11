@@ -1,22 +1,5 @@
 #nuevo proyecto
 #Script methane data management
-{
- "cells": [
-  {
-   "cell_type": "code",
-   "execution_count": null,
-   "id": "fccf9dd0-5d1c-4cc1-9193-fb6fe914bf57",
-   "metadata": {},
-   "outputs": [],
-   "source": [
-    "library(dplyr)\n",
-    "library(tidyr)\n",
-    "library(ggplot2)\n",
-    "library(lubridate)\n",
-    "install.packages(\"zoo\")\n",
-    "library(zoo)\n"
-   ]
-  }
 
 library(data.table)
 library(dplyr)
