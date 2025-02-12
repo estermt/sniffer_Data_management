@@ -11,6 +11,7 @@ library(GGally)
 
 # Set the directory
 setwd("C:/Users/Ester/Documents/curso metano")
+################################## READ FILES ############################################
 # Read the sniffer output
 bd=read.table("output_methane.txt",sep=",",header=T) #500 rows & 20 cols
 bd_id=unique(bd[,1]) #63 individuals
@@ -25,15 +26,14 @@ test$test_date1=dmy(test$test_date)
 
 test$kgmfat=test$fat*test$milk/100                  
 test$kgmprotein=test$protein*test$milk/100 
-##########################################################################
-Join both tables by ID and closest date
-#obtain date from output
+################################### Join both tables by ID and closest date ##################
+# Obtain date from output
 bd<-tidyr::separate(data = bd, col ="date",into =  c("day", "month","date","time","z","year"), sep = " ", extra = "merge")
 bd$sniffer_date=paste(bd$date, bd$month, bd$year, sep = "/")
 bd$sniffer_date1<-dmy(bd$sniffer_date)
 
 #colSums(is.na(test))
-#join the two datatables-
+# Join the two datatables-
 bd_full <- lapply(intersect(bd$cow,test$cow),function(id) {
   d1 <- subset(bd,cow==id)
   d2 <- subset(test,cow==id)
@@ -52,8 +52,8 @@ bd_full$dif_days=abs(bd_full$sniffer_date1-bd_full$test_date1)
 #check the difference of days ###choose less than 40 days
 table(bd_full$dif_days)
 
-##########################################################################
-#CALVING AND MILKING
+############################### CALVING AND MILKING ###################################
+
 # Days in milking
 bd_full=tidyr::separate(data=bd_full,col ="calving_date", into=c('calving_date', 'calving_time'),sep=' ')
 bd_full$calving_date1=dmy(bd_full$calving_date)
@@ -82,7 +82,7 @@ bd_full1<-mutate(bd_full1,num_calving=case_when(
   numpar > 1 & numpar < 3  ~ "2",
   numpar > 2 ~ "3"))
 table(bd_full1$num_calving)
-##########################################################################
+########################### Ratio and grams per day ####################################
 # Obtain ratio of mean CH4 and mean CO2
 bd_full1$ratioCH4CO2=bd_full1$meanCH4/bd_full1$meanCO2
 mean(bd_full1$ratioCH4CO2)
@@ -109,8 +109,7 @@ GE<- 1000*((NEm+NEa+NEl+NEp)/REM)/(DE/100) #g/d
 bd_full1$CH4_tier2<-GE*0.065/55.65
 
 mean(bd_full1$CH4_tier2,na.rm=T)
-##########################################################################
-# Distribution of data
+######################################### Distribution of data #######################
 summary(bd_full1)
 # Plot the phenotypes distribution
 
@@ -131,16 +130,15 @@ ggplot(df_plot, aes(x = Valor)) +
   theme_minimal() +
   labs(title = "distribution of phenotypes", x = "value", y = "Frequency")
 
-##########################################################################
-# Outlier detection
+##################################### Outlier detection ##################################
 ggplot(df_plot, aes(x = Valor)) +
   geom_boxplot(fill = "skyblue", color = "black", outlier.color = "red", outlier.shape = 16) +
   facet_wrap(~ Variable, scales = "free")+
   theme_minimal() +
   labs(title = "Box and whisker plot", x = "Variable", y = "Values")
 
-##########################################################################
-Pattern by hour
+####################################### Pattern by hour ##################################
+
 # Plot the distribution by hour 
 bd_full1$hour=substr(bd_full1$time, 1, 2) #susbtract the hour to plot
 bd_full1$hour=as.numeric(bd_full1$hour)
@@ -163,8 +161,7 @@ ggplot(data=bd, aes(x= hour, y=gd_madsen)) +
   ggtitle("Pattern by hour")
 
 
-###############################################################
-#DATA FILTERING
+################################# DATA FILTERING ########################################
 # Threshold by CO2 concentration
 bd_full2 <- bd_full1 %>%
   dplyr::mutate(across(c(meanCH4, meanCH4_5s,meanCO2,meanRatioCH4_CO2,AUC_CH4,AUC_Ratio,
@@ -203,10 +200,10 @@ data_corrected <- bd_full2 %>%
   ))
 colSums(is.na(data_corrected))
 
-#Check the data after correction 
+##################################### Check the data after correction ##################### 
 summary(data_corrected)
-#Plot again to compare
-#plot the distribution again, but without outliers
+# Plot again to compare
+# Plot the distribution again, but without outliers
 names(data_corrected)
 df_plot2 <- data_corrected %>%
   pivot_longer(cols = c(9:23,49,52,53), names_to = "Variable", values_to = "Valor")
@@ -217,16 +214,22 @@ ggplot(df_plot2, aes(x = Valor)) +
   theme_minimal() +
   labs(title = "distribution of phenotypes", x = "value", y = "Frequency")
 
-#check the pattern after correction 
-#by individual
+# Check the pattern after correction 
+# By individual
 animal_7436=subset(data_corrected,data_corrected$cow=="7436")
+ggplot(data=animal_7436, aes(x= hour, y=meanCH4)) +
+  geom_line()+
+  geom_smooth(method = "loess",  span = 0.3,se=TRUE)+
+  ggtitle("pattern by hour")
+
+ # All cows 
 ggplot(data=data_corrected, aes(x= hour, y=meanCH4)) +
   geom_line()+
   geom_smooth(method = "loess",  span = 0.3,se=TRUE)+
   facet_wrap(facets = vars(cow))+
   ggtitle("pattern by hour")
 
-#distribution by week of lactation 
+############################# Distribution by week of lactation ############################ 
 table(data_corrected$week_lactation)
 
 ggplot(data=data_corrected, aes(x= week_lactation, y=meanCH4)) +
@@ -234,15 +237,14 @@ ggplot(data=data_corrected, aes(x= week_lactation, y=meanCH4)) +
   #facet_wrap(facets = vars(cow))+
   ggtitle("week of lactation")
 
-#correlations
+################################# Plot Correlations between phenotypes ################
 
 names(data_corrected)
 correlaciones=data_corrected[,c(1,9,16,21,49,52,53,31,41,42)]
 GGally::ggpairs(correlaciones, columns = 2:10,ggplot2::aes(colour="farm"))
 
-##########################################################################
-#Mean per week
-#obtain week with lubridate
+#################################### MEAN PER WEEK ##################################
+# Obtain week with lubridate
 data_corrected$epiweek=epiweek(data_corrected$sniffer_date1)
 data_corrected$epiyear=epiyear(data_corrected$sniffer_date1)
 data_corrected$robot="1"
@@ -252,11 +254,11 @@ mean_week <- data_corrected %>%
   dplyr::summarise(across((where(is.numeric)), list(mean = ~mean(.,na.rm=T)), .names = "{.col}_mean_week"),
                    count = n()) %>%
   dplyr::left_join(data_corrected, by = c("cow","epiweek","epiyear"))#keep the other variables
-#filter by count per week, keep count > 3/5 per week
+# Filter by count per week, keep count > 3/5 records per week
 table(mean_week$count)
 mean_week1=mean_week[mean_week$count > 3, ]
 
-#Choose the variables to keep 
+# Choose the variables to keep 
 names(mean_week1)
 mean_week2=mean_week1[,c(1:3,5:38,86,87,94,95)]
 mean_week3=mean_week2[!duplicated(mean_week2),]
@@ -264,38 +266,20 @@ mean_week3=mean_week2[!duplicated(mean_week2),]
 names(mean_week3)
 mean_week4=mean_week3[,c(1:3,41,40,39,38,4:30,33,36,37)] #38 rows
 
-#Check the number of data per week and state of lactation
-mean_week5 <- mean_week4%>%
-  group_by(epiweek,cow) %>%
-  slice_min(state_lactation) %>%
-  ungroup() #36
-
-#check the number of animals by comparison group. i.e =herd-season-year or herd-robot-week-year
+# Check the number of animals by comparison group. i.e =herd-season-year or herd-robot-week-year
 mean_week5=mean_week5%>%
   group_by(farm,robot,epiweek,epiyear)%>%
   dplyr::mutate(N_group=n())
 table(mean_week5$N_group)
 
-
-#correlation between phenotypes
-names(mean_week5)
-correlaciones=mean_week5[,c(1:4,8,15,20,35,36,37,25,33,34)]
-
-GGally::ggpairs(correlaciones, columns = 5:13, ggplot2::aes(colour="farm"))
-
-#GGally::ggcorr(
-#  correlaciones[,c(4:10)],name=expression(rho),geom="circle",max_size = 10
-#,min_size = 2,size=3,nbreaks = 4,palette = "PuOr")
+  # Check the number of records per animal (to be considered in the model, repeated measurements)
+mean_week5=mean_week5%>%
+  group_by(cow)%>%
+  dplyr::mutate(N_group=n())
+table(mean_week5$N_anim) 
 
 
-pairs.panels(correlaciones[,c(4:10)],
-             ellipses = F, method = "pearson",ci=T,
-             alpha=.05,
-             cex.corr=1,
-             pch = 21+as.numeric(correlaciones$cow),
-             lm=T,
-             cor = T)
-
-
-#########################################################################
-bd=unite(bd,col = "unite",c("farm","robot","epiweek","epiyear"),sep="-",remove = F)
+##################################### EXTRA #########################################
+ # Join columns to create mixed effects
+mean_week5=unite(mean_week5,col = "random_effect",c("farm","robot","epiweek","epiyear"),sep="-",remove = F)  # create a new column "random_effect",combining 4 columns
+#keeping the original column in the dataset
