@@ -174,7 +174,7 @@ colSums(is.na(bd_full1))
 colSums(is.na(bd_full2))
 
 
-# Make correction by SD
+############################################ DATA CORRECTION BY SD ##########################
 # Function for correction of data ±3 SD
 function_outliers <- function(x) {
   mean_x <- mean(x, na.rm = TRUE)
@@ -214,7 +214,7 @@ ggplot(df_plot2, aes(x = Valor)) +
   theme_minimal() +
   labs(title = "distribution of phenotypes", x = "value", y = "Frequency")
 
-# Check the pattern after correction 
+############################# Check the pattern by hour after correction ####################### 
 # By individual
 animal_7436=subset(data_corrected,data_corrected$cow=="7436")
 ggplot(data=animal_7436, aes(x= hour, y=meanCH4)) +
@@ -266,6 +266,7 @@ mean_week3=mean_week2[!duplicated(mean_week2),]
 names(mean_week3)
 mean_week4=mean_week3[,c(1:3,41,40,39,38,4:30,33,36,37)] #38 rows
 
+########################## Check the number of records by group and animal #####################
 # Check the number of animals by comparison group. i.e =herd-season-year or herd-robot-week-year
 mean_week5=mean_week5%>%
   group_by(farm,robot,epiweek,epiyear)%>%
