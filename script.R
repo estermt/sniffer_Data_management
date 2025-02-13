@@ -195,7 +195,7 @@ data_corrected <- bd_full2 %>%
     c(meanCH4, meanCH4_5s,meanCO2,meanRatioCH4_CO2,AUC_CH4,AUC_Ratio,
       Sum_of_PeaksCH4,Sum_of_PeaksCH4_5s,Sum_of_PeaksCO2,Sum_of_PeaksRatio,
       Mean_of_PeaksCH4,Mean_of_PeaksRatio,Sum_MaxPeak, ratioCH4CO2, gd_madsen ,
-      CH4_tier2), #Apply the function to these variables  
+      CH4_tier2,milk,kgmfat,kgmprotein), #Apply the function to these variables  
     function_outliers    # Function
   ))
 colSums(is.na(data_corrected))
