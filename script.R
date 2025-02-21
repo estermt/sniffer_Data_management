@@ -10,7 +10,7 @@ library(ggplot2)
 library(GGally)
 
 # Set the directory
-setwd("C:/Users/Ester/Documents/curso metano")
+setwd("../../../")
 ################################## READ FILES ############################################
 # Read the sniffer output
 bd=read.table("output_methane.txt",sep=",",header=T) #500 rows & 20 cols
